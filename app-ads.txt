@@ -1,0 +1,3 @@
+# App-ads.txt for SommSnap
+# This file is currently empty as the app doesn't use advertising
+# If you add advertising in the future, add authorized ad networks here
