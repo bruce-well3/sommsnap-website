@@ -50,10 +50,17 @@ async function loadScans() {
 
     try {
         console.log('📊 Loading scans from Firestore...');
+        console.log('Database object:', db);
 
         // Get all users
         const usersSnapshot = await db.collection('users').get();
         console.log(`Found ${usersSnapshot.size} users`);
+
+        // Log user IDs for debugging
+        if (usersSnapshot.size > 0) {
+            console.log('User IDs:', usersSnapshot.docs.map(d => d.id));
+        }
+
         allScans = [];
 
         // For each user, get their scan history
