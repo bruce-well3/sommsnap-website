@@ -253,15 +253,24 @@ nav a:hover {
     margin: 0 auto;
 }
 
+.pricing-grid-two {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
 .plan {
     background: rgba(255, 255, 255, 0.95);
     border: 2px solid rgba(255, 255, 255, 0.3);
     border-radius: 15px;
-    padding: 1.5rem 1rem;
+    padding: 2rem 1.5rem;
     text-align: center;
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    position: relative;
 }
 
 .plan.featured {
@@ -269,6 +278,20 @@ nav a:hover {
     transform: scale(1.05);
     background: rgba(255, 255, 255, 1);
     box-shadow: 0 12px 40px rgba(114, 47, 55, 0.4);
+}
+
+.popular-badge {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, #722f37, #8b4049);
+    color: white;
+    padding: 0.5rem 1.5rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    box-shadow: 0 4px 15px rgba(114, 47, 55, 0.4);
 }
 
 .plan:hover {
@@ -283,10 +306,16 @@ nav a:hover {
 }
 
 .price {
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: bold;
-    color: #333;
-    margin-bottom: 1rem;
+    color: #722f37;
+    margin-bottom: 0.5rem;
+}
+
+.price-detail {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 1.5rem;
 }
 
 .plan ul {
@@ -415,12 +444,18 @@ footer a:hover {
 
     .feature-grid,
     .pricing-grid,
+    .pricing-grid-two,
     .steps-grid {
         grid-template-columns: 1fr;
     }
 
     .plan.featured {
-        transform: none;
+        transform: scale(1.02);
+    }
+
+    .popular-badge {
+        font-size: 0.75rem;
+        padding: 0.4rem 1rem;
     }
 
     .step-number {
