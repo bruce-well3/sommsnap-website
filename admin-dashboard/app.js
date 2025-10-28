@@ -50,23 +50,21 @@ async function loadScans() {
 
     try {
         console.log('📊 Loading scans from Firestore...');
-        console.log('Database object:', db);
+
+        // Get all users
+        const usersSnapshot = await db.collection('users').get();
+        console.log(`Found ${usersSnapshot.size} users`);
+
+        if (usersSnapshot.size > 0) {
+            console.log('User IDs:', usersSnapshot.docs.map(d => d.id));
+        }
 
         allScans = [];
 
-        // Known user IDs from app logs - add more as needed
-        // You can get these from the app logs or Firebase console
-        const knownUserIds = [
-            'V7u3BMsoFgYWtCrHMO5T2kpe5nm2',  // From your app logs
-            'testUser',  // Test user
-            'test_user_id',  // Test user
-            '10000000000'  // Test phone number
-        ];
+        // For each user, get their scan history
+        for (const userDoc of usersSnapshot.docs) {
+            const userId = userDoc.id;
 
-        console.log(`Checking ${knownUserIds.length} known user IDs...`);
-
-        // For each known user, get their scan history
-        for (const userId of knownUserIds) {
             try {
                 // Get snap history (wine lists, bottles, shelf, party)
                 const snapHistoryRef = db.collection('users').doc(userId).collection('snapHistory');
