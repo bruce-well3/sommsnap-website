@@ -264,6 +264,37 @@
             margin-bottom: 20px;
             opacity: 0.3;
         }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 0;
+        }
+
+        .tab-btn {
+            padding: 12px 24px;
+            background: none;
+            border: none;
+            border-bottom: 3px solid transparent;
+            color: #666;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: -2px;
+        }
+
+        .tab-btn:hover {
+            color: #764ba2;
+            border-bottom-color: #e0e0e0;
+        }
+
+        .tab-btn.active {
+            color: #764ba2;
+            border-bottom-color: #764ba2;
+        }
     </style>
 </head>
 <body>
@@ -309,6 +340,14 @@
                     <h3>Success Rate</h3>
                     <div class="value" id="successRate">0%</div>
                 </div>
+                <div class="stat-card">
+                    <h3>Cache Hit Rate</h3>
+                    <div class="value" id="cacheHitRate" style="color: #8b5cf6;">0%</div>
+                </div>
+                <div class="stat-card">
+                    <h3>Cache Hits</h3>
+                    <div class="value" id="cacheHits" style="color: #8b5cf6; font-size: 24px;">0/0</div>
+                </div>
             </div>
 
             <div class="filters">
@@ -332,7 +371,10 @@
             </div>
 
             <div class="scans-container">
-                <h2>Recent Scans</h2>
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="all" onclick="switchTab('all')">All Scans</button>
+                    <button class="tab-btn" data-tab="errors" onclick="switchTab('errors')">Errors Only</button>
+                </div>
                 <div id="scansList"></div>
             </div>
         </div>

@@ -2,6 +2,7 @@
 let isAuthenticated = false;
 let allScans = [];
 let filteredScans = [];
+let currentTab = 'all'; // 'all' or 'errors'
 
 // Check if already logged in
 window.addEventListener('DOMContentLoaded', () => {
@@ -93,7 +94,10 @@ async function loadScans() {
                     timestamp: data.timestamp?.toDate() || new Date(),
                     status: data.status || 'completed',
                     result: result,
-                    error: data.error || null
+                    error: data.error || null,
+                    usedCache: data.usedCache,
+                    cacheHitCount: data.cacheHitCount,
+                    totalWinesScanned: data.totalWinesScanned
                 });
             });
             } catch (userError) {
@@ -131,6 +135,20 @@ async function loadScans() {
     }
 }
 
+// Switch tabs
+function switchTab(tab) {
+    currentTab = tab;
+
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+
+    // Apply filters to update display
+    applyFilters();
+}
+
 // Update statistics
 function updateStats() {
     const totalScans = allScans.length;
@@ -142,10 +160,23 @@ function updateStats() {
     ).length;
     const successRate = totalScans > 0 ? Math.round((successfulScans / totalScans) * 100) : 0;
 
+    // Calculate cache statistics
+    const scansWithCacheData = allScans.filter(s => s.usedCache !== null && s.usedCache !== undefined);
+    const cacheHits = scansWithCacheData.filter(s => s.usedCache === true).length;
+    const cacheHitRate = scansWithCacheData.length > 0 ? Math.round((cacheHits / scansWithCacheData.length) * 100) : 0;
+
     document.getElementById('totalScans').textContent = totalScans;
     document.getElementById('successfulScans').textContent = successfulScans;
     document.getElementById('errorScans').textContent = errorScans;
     document.getElementById('successRate').textContent = successRate + '%';
+
+    // Update cache stats
+    if (document.getElementById('cacheHitRate')) {
+        document.getElementById('cacheHitRate').textContent = cacheHitRate + '%';
+    }
+    if (document.getElementById('cacheHits')) {
+        document.getElementById('cacheHits').textContent = `${cacheHits}/${scansWithCacheData.length}`;
+    }
 }
 
 // Apply filters
@@ -156,6 +187,12 @@ function applyFilters() {
     const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
 
     filteredScans = allScans.filter(scan => {
+        // Tab filter - only show errors if on errors tab
+        if (currentTab === 'errors') {
+            const isError = scan.status === 'error' || scan.result.toLowerCase().includes('error');
+            if (!isError) return false;
+        }
+
         // Type filter
         if (scanTypeFilter && scan.type !== scanTypeFilter) return false;
 
