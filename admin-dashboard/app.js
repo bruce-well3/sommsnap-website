@@ -49,8 +49,11 @@ async function loadScans() {
     scansList.innerHTML = '<div class="loading">Loading scans...</div>';
 
     try {
+        console.log('📊 Loading scans from Firestore...');
+
         // Get all users
         const usersSnapshot = await db.collection('users').get();
+        console.log(`Found ${usersSnapshot.size} users`);
         allScans = [];
 
         // For each user, get their scan history
@@ -61,15 +64,29 @@ async function loadScans() {
             const snapHistoryRef = db.collection('users').doc(userId).collection('snapHistory');
             const snapSnapshot = await snapHistoryRef.orderBy('timestamp', 'desc').limit(100).get();
 
+            console.log(`User ${userId}: Found ${snapSnapshot.size} scans`);
+
             snapSnapshot.forEach(doc => {
                 const data = doc.data();
+
+                // Determine scan type from result content or default to wine-list
+                let scanType = 'wine-list';
+                const result = data.analysisResult || '';
+                if (result.toLowerCase().includes('party') || result.toLowerCase().includes('ranking')) {
+                    scanType = 'party';
+                } else if (result.toLowerCase().includes('shelf') || result.toLowerCase().includes('wine shop')) {
+                    scanType = 'shelf';
+                } else if (result.toLowerCase().includes('bottle') && !result.toLowerCase().includes('menu')) {
+                    scanType = 'bottle';
+                }
+
                 allScans.push({
                     id: doc.id,
                     userId: userId,
-                    type: data.scanType || 'wine-list',
+                    type: scanType,
                     timestamp: data.timestamp?.toDate() || new Date(),
                     status: data.status || 'completed',
-                    result: data.analysisResult || '',
+                    result: result,
                     error: data.error || null
                 });
             });
@@ -78,6 +95,8 @@ async function loadScans() {
         // Sort by most recent
         allScans.sort((a, b) => b.timestamp - a.timestamp);
 
+        console.log(`✅ Loaded ${allScans.length} total scans`);
+
         // Update stats
         updateStats();
 
@@ -85,10 +104,19 @@ async function loadScans() {
         applyFilters();
 
     } catch (error) {
-        console.error('Error loading scans:', error);
+        console.error('❌ Error loading scans:', error);
+        console.error('Error details:', error.code, error.message);
+
+        let errorMsg = error.message;
+        if (error.code === 'permission-denied') {
+            errorMsg = 'Permission denied. Check Firestore security rules to allow reading from the admin dashboard.';
+        }
+
         scansList.innerHTML = `
             <div class="empty-state">
-                <p>Error loading scans: ${error.message}</p>
+                <p style="color: #e53e3e;">Error loading scans</p>
+                <p style="font-size: 14px; color: #666;">${errorMsg}</p>
+                <p style="font-size: 12px; color: #999; margin-top: 10px;">Check browser console for details</p>
             </div>
         `;
     }
