@@ -268,32 +268,28 @@
         .tabs {
             display: flex;
             gap: 10px;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #e0e0e0;
-            padding-bottom: 0;
         }
 
         .tab-btn {
-            padding: 12px 24px;
-            background: none;
-            border: none;
-            border-bottom: 3px solid transparent;
-            color: #666;
-            font-size: 16px;
-            font-weight: 600;
+            padding: 8px 16px;
+            background: #f3f4f6;
+            border: 2px solid transparent;
+            border-radius: 6px;
             cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
             transition: all 0.3s;
-            margin-bottom: -2px;
         }
 
         .tab-btn:hover {
-            color: #764ba2;
-            border-bottom-color: #e0e0e0;
+            background: #e5e7eb;
         }
 
         .tab-btn.active {
+            background: white;
+            border-color: #764ba2;
             color: #764ba2;
-            border-bottom-color: #764ba2;
         }
     </style>
 </head>
@@ -346,7 +342,7 @@
                 </div>
                 <div class="stat-card">
                     <h3>Cache Hits</h3>
-                    <div class="value" id="cacheHits" style="color: #8b5cf6; font-size: 24px;">0/0</div>
+                    <div class="value" id="cacheHits" style="color: #8b5cf6;">0</div>
                 </div>
             </div>
 
@@ -371,9 +367,12 @@
             </div>
 
             <div class="scans-container">
-                <div class="tabs">
-                    <button class="tab-btn active" data-tab="all" onclick="switchTab('all')">All Scans</button>
-                    <button class="tab-btn" data-tab="errors" onclick="switchTab('errors')">Errors Only</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 style="margin: 0;">Recent Scans</h2>
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="all" onclick="switchTab('all')">All Scans</button>
+                        <button class="tab-btn" data-tab="errors" onclick="switchTab('errors')">Errors Only</button>
+                    </div>
                 </div>
                 <div id="scansList"></div>
             </div>

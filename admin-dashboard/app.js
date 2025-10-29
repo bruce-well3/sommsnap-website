@@ -2,7 +2,7 @@
 let isAuthenticated = false;
 let allScans = [];
 let filteredScans = [];
-let currentTab = 'all'; // 'all' or 'errors'
+let currentTab = 'all';
 
 // Check if already logged in
 window.addEventListener('DOMContentLoaded', () => {
@@ -50,65 +50,37 @@ async function loadScans() {
     scansList.innerHTML = '<div class="loading">Loading scans...</div>';
 
     try {
-        console.log('📊 Loading scans from Firestore...');
-
         // Get all users
         const usersSnapshot = await db.collection('users').get();
-        console.log(`Found ${usersSnapshot.size} users`);
-
-        if (usersSnapshot.size > 0) {
-            console.log('User IDs:', usersSnapshot.docs.map(d => d.id));
-        }
-
         allScans = [];
 
         // For each user, get their scan history
         for (const userDoc of usersSnapshot.docs) {
             const userId = userDoc.id;
 
-            try {
-                // Get snap history (wine lists, bottles, shelf, party)
-                const snapHistoryRef = db.collection('users').doc(userId).collection('snapHistory');
-                const snapSnapshot = await snapHistoryRef.orderBy('timestamp', 'desc').limit(100).get();
-
-                console.log(`User ${userId}: Found ${snapSnapshot.size} scans`);
+            // Get snap history (wine lists, bottles, shelf, party)
+            const snapHistoryRef = db.collection('users').doc(userId).collection('snapHistory');
+            const snapSnapshot = await snapHistoryRef.orderBy('timestamp', 'desc').limit(100).get();
 
             snapSnapshot.forEach(doc => {
                 const data = doc.data();
-
-                // Determine scan type from result content or default to wine-list
-                let scanType = 'wine-list';
-                const result = data.analysisResult || '';
-                if (result.toLowerCase().includes('party') || result.toLowerCase().includes('ranking')) {
-                    scanType = 'party';
-                } else if (result.toLowerCase().includes('shelf') || result.toLowerCase().includes('wine shop')) {
-                    scanType = 'shelf';
-                } else if (result.toLowerCase().includes('bottle') && !result.toLowerCase().includes('menu')) {
-                    scanType = 'bottle';
-                }
-
                 allScans.push({
                     id: doc.id,
                     userId: userId,
-                    type: scanType,
+                    type: data.scanType || 'wine-list',
                     timestamp: data.timestamp?.toDate() || new Date(),
                     status: data.status || 'completed',
-                    result: result,
+                    result: data.analysisResult || '',
                     error: data.error || null,
-                    usedCache: data.usedCache,
-                    cacheHitCount: data.cacheHitCount,
-                    totalWinesScanned: data.totalWinesScanned
+                    usedCache: data.usedCache || null,
+                    cacheHitCount: data.cacheHitCount || null,
+                    totalWinesScanned: data.totalWinesScanned || null
                 });
             });
-            } catch (userError) {
-                console.log(`Error loading user ${userId}:`, userError.message);
-            }
         }
 
         // Sort by most recent
         allScans.sort((a, b) => b.timestamp - a.timestamp);
-
-        console.log(`✅ Loaded ${allScans.length} total scans`);
 
         // Update stats
         updateStats();
@@ -117,36 +89,13 @@ async function loadScans() {
         applyFilters();
 
     } catch (error) {
-        console.error('❌ Error loading scans:', error);
-        console.error('Error details:', error.code, error.message);
-
-        let errorMsg = error.message;
-        if (error.code === 'permission-denied') {
-            errorMsg = 'Permission denied. Check Firestore security rules to allow reading from the admin dashboard.';
-        }
-
+        console.error('Error loading scans:', error);
         scansList.innerHTML = `
             <div class="empty-state">
-                <p style="color: #e53e3e;">Error loading scans</p>
-                <p style="font-size: 14px; color: #666;">${errorMsg}</p>
-                <p style="font-size: 12px; color: #999; margin-top: 10px;">Check browser console for details</p>
+                <p>Error loading scans: ${error.message}</p>
             </div>
         `;
     }
-}
-
-// Switch tabs
-function switchTab(tab) {
-    currentTab = tab;
-
-    // Update tab buttons
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
-
-    // Apply filters to update display
-    applyFilters();
 }
 
 // Update statistics
@@ -169,14 +118,18 @@ function updateStats() {
     document.getElementById('successfulScans').textContent = successfulScans;
     document.getElementById('errorScans').textContent = errorScans;
     document.getElementById('successRate').textContent = successRate + '%';
+    document.getElementById('cacheHitRate').textContent = cacheHitRate + '%';
+    document.getElementById('cacheHits').textContent = cacheHits;
+}
 
-    // Update cache stats
-    if (document.getElementById('cacheHitRate')) {
-        document.getElementById('cacheHitRate').textContent = cacheHitRate + '%';
-    }
-    if (document.getElementById('cacheHits')) {
-        document.getElementById('cacheHits').textContent = `${cacheHits}/${scansWithCacheData.length}`;
-    }
+// Switch tabs
+function switchTab(tab) {
+    currentTab = tab;
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+    applyFilters();
 }
 
 // Apply filters
@@ -187,7 +140,7 @@ function applyFilters() {
     const searchFilter = document.getElementById('searchFilter').value.toLowerCase();
 
     filteredScans = allScans.filter(scan => {
-        // Tab filter - only show errors if on errors tab
+        // Tab filter
         if (currentTab === 'errors') {
             const isError = scan.status === 'error' || scan.result.toLowerCase().includes('error');
             if (!isError) return false;
