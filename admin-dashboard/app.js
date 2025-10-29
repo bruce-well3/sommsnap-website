@@ -207,6 +207,9 @@ function renderScans() {
             </span>
         ` : '';
 
+        // Unique index for expand/collapse
+        const scanIndex = filteredScans.indexOf(scan);
+
         return `
             <div class="scan-item">
                 <div class="scan-header">
@@ -221,18 +224,19 @@ function renderScans() {
                 </div>
                 <div class="scan-details">
                     <strong>User:</strong> ${scan.userId.substring(0, 8)}...<br>
-                    <strong>Scan ID:</strong> ${scan.id}
+                    <strong>Scan ID:</strong> ${scan.id}<br>
+                    <strong>Cache:</strong> ${scan.usedCache === true ? 'Hit ✓' : scan.usedCache === false ? 'Miss ✗' : 'N/A'}
+                    ${scan.cacheHitCount !== null && scan.totalWinesScanned !== null ?
+                        ` (${scan.cacheHitCount}/${scan.totalWinesScanned} wines)` : ''}
                 </div>
                 <div class="scan-response">
-                    <div class="response-preview">${escapeHtml(scan.result.substring(0, 500))}${scan.result.length > 500 ? '...' : ''}</div>
-                    ${scan.result.length > 500 ? `
-                        <button class="expand-btn" onclick="toggleFullResponse(this, '${scan.id}')">
-                            Show Full Response
-                        </button>
-                        <div class="response-full" id="full-${scan.id}" style="display: none;">
-                            ${escapeHtml(scan.result)}
-                        </div>
-                    ` : ''}
+                    <div class="response-preview" id="preview-${scanIndex}">${escapeHtml(scan.result.substring(0, 500))}${scan.result.length > 500 ? '...' : ''}</div>
+                    <button class="expand-btn" onclick="toggleFullResponse(${scanIndex})">
+                        Show Full Response
+                    </button>
+                    <div class="response-full" id="full-${scanIndex}" style="display: none;">
+                        ${escapeHtml(scan.result)}
+                    </div>
                 </div>
             </div>
         `;
@@ -256,9 +260,10 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function toggleFullResponse(button, scanId) {
-    const fullDiv = document.getElementById('full-' + scanId);
-    const previewDiv = button.previousElementSibling;
+function toggleFullResponse(scanIndex) {
+    const fullDiv = document.getElementById('full-' + scanIndex);
+    const previewDiv = document.getElementById('preview-' + scanIndex);
+    const button = event.target;
 
     if (fullDiv.style.display === 'none') {
         fullDiv.style.display = 'block';
