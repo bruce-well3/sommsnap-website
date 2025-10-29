@@ -197,12 +197,23 @@ function renderScans() {
         const statusClass = isError ? 'error' : 'success';
         const statusText = isError ? 'Error' : 'Success';
 
+        // Cache information
+        const hasCacheData = scan.usedCache !== null && scan.usedCache !== undefined;
+        const cacheInfo = hasCacheData ? `
+            <span class="cache-badge ${scan.usedCache ? 'cache-hit' : 'cache-miss'}">
+                ${scan.usedCache ? '⚡ Cache Hit' : '🔄 Cache Miss'}
+                ${scan.cacheHitCount !== null && scan.totalWinesScanned !== null ?
+                    ` (${scan.cacheHitCount}/${scan.totalWinesScanned} wines)` : ''}
+            </span>
+        ` : '';
+
         return `
             <div class="scan-item">
                 <div class="scan-header">
                     <div>
                         <span class="scan-type ${scan.type}">${scan.type.replace('-', ' ')}</span>
                         <span class="scan-status ${statusClass}">${statusText}</span>
+                        ${cacheInfo}
                     </div>
                     <div class="scan-details">
                         ${formatDate(scan.timestamp)}
@@ -213,7 +224,15 @@ function renderScans() {
                     <strong>Scan ID:</strong> ${scan.id}
                 </div>
                 <div class="scan-response">
-                    ${escapeHtml(scan.result.substring(0, 500))}${scan.result.length > 500 ? '...' : ''}
+                    <div class="response-preview">${escapeHtml(scan.result.substring(0, 500))}${scan.result.length > 500 ? '...' : ''}</div>
+                    ${scan.result.length > 500 ? `
+                        <button class="expand-btn" onclick="toggleFullResponse(this, '${scan.id}')">
+                            Show Full Response
+                        </button>
+                        <div class="response-full" id="full-${scan.id}" style="display: none;">
+                            ${escapeHtml(scan.result)}
+                        </div>
+                    ` : ''}
                 </div>
             </div>
         `;
@@ -235,4 +254,19 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function toggleFullResponse(button, scanId) {
+    const fullDiv = document.getElementById('full-' + scanId);
+    const previewDiv = button.previousElementSibling;
+
+    if (fullDiv.style.display === 'none') {
+        fullDiv.style.display = 'block';
+        previewDiv.style.display = 'none';
+        button.textContent = 'Show Less';
+    } else {
+        fullDiv.style.display = 'none';
+        previewDiv.style.display = 'block';
+        button.textContent = 'Show Full Response';
+    }
 }
