@@ -405,15 +405,41 @@
                 </div>
             </div>
 
+            <!-- Main Tabs -->
             <div class="scans-container">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                    <h2 style="margin: 0;">Recent Scans</h2>
                     <div class="tabs">
-                        <button class="tab-btn active" data-tab="all" onclick="switchTab('all')">All Scans</button>
-                        <button class="tab-btn" data-tab="errors" onclick="switchTab('errors')">Errors Only</button>
+                        <button class="tab-btn active" data-view="scans" onclick="switchView('scans')">📊 Scans</button>
+                        <button class="tab-btn" data-view="cache" onclick="switchView('cache')">🗄️ Wine Cache</button>
                     </div>
                 </div>
-                <div id="scansList"></div>
+
+                <!-- Scans View -->
+                <div id="scansView" class="view-panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <h2 style="margin: 0;">Recent Scans</h2>
+                        <div class="tabs">
+                            <button class="tab-btn active" data-tab="all" onclick="switchScanTab('all')">All Scans</button>
+                            <button class="tab-btn" data-tab="errors" onclick="switchScanTab('errors')">Errors Only</button>
+                        </div>
+                    </div>
+                    <div id="scansList"></div>
+                </div>
+
+                <!-- Wine Cache View -->
+                <div id="cacheView" class="view-panel" style="display: none;">
+                    <div style="margin-bottom: 20px;">
+                        <h2 style="margin-bottom: 15px;">Wine Database</h2>
+                        <input
+                            type="text"
+                            id="wineSearchInput"
+                            placeholder="Search wines by name, producer, region, or varietal..."
+                            style="width: 100%; padding: 12px; border: 2px solid #e0e0e0; border-radius: 6px; font-size: 16px;"
+                            onkeyup="searchWines()"
+                        >
+                    </div>
+                    <div id="winesList"></div>
+                </div>
             </div>
         </div>
     </div>

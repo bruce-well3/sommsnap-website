@@ -3,6 +3,9 @@ let isAuthenticated = false;
 let allScans = [];
 let filteredScans = [];
 let currentTab = 'all';
+let currentView = 'scans';
+let allWines = [];
+let filteredWines = [];
 
 // Check if already logged in
 window.addEventListener('DOMContentLoaded', () => {
@@ -59,8 +62,9 @@ async function loadScans() {
             const userId = userDoc.id;
 
             // Get snap history (wine lists, bottles, shelf, party)
+            // Note: Firestore has a default limit - we need to paginate or increase limit
             const snapHistoryRef = db.collection('users').doc(userId).collection('snapHistory');
-            const snapSnapshot = await snapHistoryRef.orderBy('timestamp', 'desc').limit(100).get();
+            const snapSnapshot = await snapHistoryRef.orderBy('timestamp', 'desc').limit(1000).get();
 
             snapSnapshot.forEach(doc => {
                 const data = doc.data();
@@ -70,7 +74,8 @@ async function loadScans() {
                     type: data.scanType || 'wine-list',
                     timestamp: data.timestamp?.toDate() || new Date(),
                     status: data.status || 'completed',
-                    result: data.analysisResult || '',
+                    result: data.preview || data.analysisResult || '', // Use preview field (200 chars)
+                    hasError: data.hasError || false,
                     error: data.error || null,
                     usedCache: data.usedCache || null,
                     cacheHitCount: data.cacheHitCount || null,
@@ -122,10 +127,28 @@ function updateStats() {
     document.getElementById('cacheHits').textContent = cacheHits;
 }
 
-// Switch tabs
-function switchTab(tab) {
+// Switch main views
+function switchView(view) {
+    currentView = view;
+    document.querySelectorAll('[data-view]').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    document.querySelector(`[data-view="${view}"]`).classList.add('active');
+
+    // Show/hide views
+    document.getElementById('scansView').style.display = view === 'scans' ? 'block' : 'none';
+    document.getElementById('cacheView').style.display = view === 'cache' ? 'block' : 'none';
+
+    // Load cache data if switching to cache view
+    if (view === 'cache' && allWines.length === 0) {
+        loadWineCache();
+    }
+}
+
+// Switch scan tabs (within scans view)
+function switchScanTab(tab) {
     currentTab = tab;
-    document.querySelectorAll('.tab-btn').forEach(btn => {
+    document.querySelectorAll('[data-tab]').forEach(btn => {
         btn.classList.remove('active');
     });
     document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
@@ -207,9 +230,6 @@ function renderScans() {
             </span>
         ` : '';
 
-        // Unique index for expand/collapse
-        const scanIndex = filteredScans.indexOf(scan);
-
         return `
             <div class="scan-item">
                 <div class="scan-header">
@@ -223,20 +243,15 @@ function renderScans() {
                     </div>
                 </div>
                 <div class="scan-details">
-                    <strong>User:</strong> ${scan.userId}<br>
-                    <strong>Scan ID:</strong> ${scan.id}<br>
-                    <strong>Cache:</strong> ${scan.usedCache === true ? 'Hit ✓' : scan.usedCache === false ? 'Miss ✗' : 'N/A'}
-                    ${scan.cacheHitCount !== null && scan.totalWinesScanned !== null ?
-                        ` (${scan.cacheHitCount}/${scan.totalWinesScanned} wines)` : ''}
+                    <strong>User:</strong> ${scan.userId.substring(0, 8)}...<br>
+                    <strong>Scan ID:</strong> ${scan.id}
                 </div>
                 <div class="scan-response">
-                    <div class="response-preview" id="preview-${scanIndex}">${escapeHtml(scan.result.substring(0, 500))}${scan.result.length > 500 ? '...' : ''}</div>
-                    <button class="expand-btn" onclick="toggleFullResponse(${scanIndex})">
+                    <div class="response-preview">${escapeHtml(scan.result)}${scan.result.length >= 200 ? '...' : ''}</div>
+                    <button class="expand-btn" onclick="toggleFullResponse(this, '${scan.id}')">
                         Show Full Response
                     </button>
-                    <div class="response-full" id="full-${scanIndex}" style="display: none;">
-                        ${escapeHtml(scan.result)}
-                    </div>
+                    <div class="response-full" id="full-${scan.id}" style="display: none;"></div>
                 </div>
             </div>
         `;
@@ -260,12 +275,53 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function toggleFullResponse(scanIndex) {
-    const fullDiv = document.getElementById('full-' + scanIndex);
-    const previewDiv = document.getElementById('preview-' + scanIndex);
-    const button = event.target;
+async function toggleFullResponse(button, scanId) {
+    const fullDiv = document.getElementById('full-' + scanId);
+    const previewDiv = button.previousElementSibling;
 
     if (fullDiv.style.display === 'none') {
+        // Check if we already loaded the full text
+        if (fullDiv.dataset.loaded !== 'true') {
+            button.disabled = true;
+            button.textContent = 'Loading...';
+
+            try {
+                // Fetch full analysis from D1 API
+                const response = await fetch(`https://api.sommsnap.com/scans/${scanId}`, {
+                    headers: {
+                        'x-app-key': 'sommsnap-api-key-2025'
+                    }
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    fullDiv.innerHTML = escapeHtml(data.analysisResult);
+                    fullDiv.dataset.loaded = 'true';
+                } else {
+                    // Fallback: show preview if API fails
+                    const scan = allScans.find(s => s.id === scanId);
+                    if (scan && scan.result) {
+                        fullDiv.innerHTML = escapeHtml(scan.result);
+                        fullDiv.dataset.loaded = 'true';
+                    } else {
+                        fullDiv.innerHTML = '<em>Failed to load full analysis</em>';
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading full analysis:', error);
+                // Fallback: show preview
+                const scan = allScans.find(s => s.id === scanId);
+                if (scan && scan.result) {
+                    fullDiv.innerHTML = escapeHtml(scan.result);
+                    fullDiv.dataset.loaded = 'true';
+                } else {
+                    fullDiv.innerHTML = '<em>Failed to load full analysis</em>';
+                }
+            }
+
+            button.disabled = false;
+        }
+
         fullDiv.style.display = 'block';
         previewDiv.style.display = 'none';
         button.textContent = 'Show Less';
@@ -274,4 +330,104 @@ function toggleFullResponse(scanIndex) {
         previewDiv.style.display = 'block';
         button.textContent = 'Show Full Response';
     }
+}
+
+// Load wine cache from API
+async function loadWineCache() {
+    const winesList = document.getElementById('winesList');
+    winesList.innerHTML = '<div class="loading">Loading wine database...</div>';
+
+    try {
+        const response = await fetch('https://api.sommsnap.com/wine-cache/all', {
+            headers: {
+                'x-app-key': 'sommsnap-api-key-2025'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`API returned ${response.status}`);
+        }
+
+        const data = await response.json();
+        allWines = data.wines || [];
+        filteredWines = allWines;
+        renderWines();
+
+    } catch (error) {
+        console.error('Error loading wine cache:', error);
+        winesList.innerHTML = `
+            <div class="empty-state">
+                <p>Error loading wine database: ${error.message}</p>
+                <p style="font-size: 14px; margin-top: 10px;">Endpoint: /wine-cache/all</p>
+            </div>
+        `;
+    }
+}
+
+// Search wines
+function searchWines() {
+    const searchTerm = document.getElementById('wineSearchInput').value.toLowerCase();
+
+    if (!searchTerm) {
+        filteredWines = allWines;
+    } else {
+        filteredWines = allWines.filter(wine => {
+            const searchText = `${wine.name} ${wine.producer || ''} ${wine.region || ''} ${wine.varietal || ''}`.toLowerCase();
+            return searchText.includes(searchTerm);
+        });
+    }
+
+    renderWines();
+}
+
+// Render wines
+function renderWines() {
+    const winesList = document.getElementById('winesList');
+
+    if (filteredWines.length === 0) {
+        winesList.innerHTML = `
+            <div class="empty-state">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                </svg>
+                <p>${allWines.length === 0 ? 'Wine database is empty' : 'No wines match your search'}</p>
+            </div>
+        `;
+        return;
+    }
+
+    winesList.innerHTML = `
+        <div style="margin-bottom: 15px; color: #666;">
+            Showing ${filteredWines.length} of ${allWines.length} wines
+        </div>
+        ${filteredWines.map(wine => {
+            return `
+                <div class="scan-item">
+                    <div class="scan-header">
+                        <div>
+                            <h3 style="margin: 0 0 10px 0; color: #333; font-size: 18px;">
+                                ${escapeHtml(wine.name || 'Unknown Wine')}
+                            </h3>
+                        </div>
+                        <div class="scan-details">
+                            <strong>Scans:</strong> ${wine.scan_count || 0}
+                        </div>
+                    </div>
+                    <div class="scan-details">
+                        ${wine.producer ? `<strong>Producer:</strong> ${escapeHtml(wine.producer)}<br>` : ''}
+                        ${wine.region ? `<strong>Region:</strong> ${escapeHtml(wine.region)}<br>` : ''}
+                        ${wine.varietal ? `<strong>Varietal:</strong> ${escapeHtml(wine.varietal)}<br>` : ''}
+                        ${wine.vintage ? `<strong>Vintage:</strong> ${wine.vintage}<br>` : ''}
+                        ${wine.verification_status ? `<strong>Status:</strong> ${wine.verification_status}<br>` : ''}
+                    </div>
+                    ${wine.tasting_notes ? `
+                        <div class="scan-response">
+                            <strong>Tasting Notes:</strong><br>
+                            ${escapeHtml(wine.tasting_notes.substring(0, 300))}${wine.tasting_notes.length > 300 ? '...' : ''}
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('')}
+    `;
 }
