@@ -418,6 +418,8 @@ function renderWines() {
                         ${wine.region ? `<strong>Region:</strong> ${escapeHtml(wine.region)}<br>` : ''}
                         ${wine.varietal ? `<strong>Varietal:</strong> ${escapeHtml(wine.varietal)}<br>` : ''}
                         ${wine.vintage ? `<strong>Vintage:</strong> ${wine.vintage}<br>` : ''}
+                        ${wine.typical_retail_price ? `<strong>Typical Price:</strong> $${wine.typical_retail_price}<br>` : ''}
+                        ${wine.ratings ? `<strong>Ratings:</strong> ${escapeHtml(wine.ratings)}<br>` : ''}
                         ${wine.verification_status ? `<strong>Status:</strong> ${wine.verification_status}<br>` : ''}
                     </div>
                     ${wine.tasting_notes ? `
