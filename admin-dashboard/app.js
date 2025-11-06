@@ -223,7 +223,7 @@ function renderScans() {
                     </div>
                 </div>
                 <div class="scan-details">
-                    <strong>User:</strong> ${scan.userId.substring(0, 8)}...<br>
+                    <strong>User:</strong> ${scan.userId}<br>
                     <strong>Scan ID:</strong> ${scan.id}<br>
                     <strong>Cache:</strong> ${scan.usedCache === true ? 'Hit ✓' : scan.usedCache === false ? 'Miss ✗' : 'N/A'}
                     ${scan.cacheHitCount !== null && scan.totalWinesScanned !== null ?
