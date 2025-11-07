@@ -380,6 +380,20 @@ function searchWines() {
     renderWines();
 }
 
+// Toggle wine details
+function toggleWineDetails(index) {
+    const summaryDiv = document.getElementById(`wine-summary-${index}`);
+    const detailsDiv = document.getElementById(`wine-details-${index}`);
+
+    if (detailsDiv.style.display === 'none') {
+        summaryDiv.style.display = 'none';
+        detailsDiv.style.display = 'block';
+    } else {
+        summaryDiv.style.display = 'block';
+        detailsDiv.style.display = 'none';
+    }
+}
+
 // Render wines
 function renderWines() {
     const winesList = document.getElementById('winesList');
@@ -400,7 +414,20 @@ function renderWines() {
         <div style="margin-bottom: 15px; color: #666;">
             Showing ${filteredWines.length} of ${allWines.length} wines
         </div>
-        ${filteredWines.map(wine => {
+        ${filteredWines.map((wine, index) => {
+            // Format all wine data for detailed view
+            const allFields = Object.entries(wine)
+                .filter(([key, value]) => value !== null && value !== undefined && value !== '')
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .map(([key, value]) => {
+                    let displayValue = value;
+                    if (typeof value === 'object') {
+                        displayValue = JSON.stringify(value, null, 2);
+                    }
+                    return `<strong>${escapeHtml(key)}:</strong> ${escapeHtml(String(displayValue))}`;
+                })
+                .join('<br>');
+
             return `
                 <div class="scan-item">
                     <div class="scan-header">
@@ -413,21 +440,40 @@ function renderWines() {
                             <strong>Scans:</strong> ${wine.scan_count || 0}
                         </div>
                     </div>
-                    <div class="scan-details">
-                        ${wine.producer ? `<strong>Producer:</strong> ${escapeHtml(wine.producer)}<br>` : ''}
-                        ${wine.region ? `<strong>Region:</strong> ${escapeHtml(wine.region)}<br>` : ''}
-                        ${wine.varietal ? `<strong>Varietal:</strong> ${escapeHtml(wine.varietal)}<br>` : ''}
-                        ${wine.vintage ? `<strong>Vintage:</strong> ${wine.vintage}<br>` : ''}
-                        ${wine.typical_retail_price ? `<strong>Typical Price:</strong> $${wine.typical_retail_price}<br>` : ''}
-                        ${wine.ratings ? `<strong>Ratings:</strong> ${escapeHtml(wine.ratings)}<br>` : ''}
-                        ${wine.verification_status ? `<strong>Status:</strong> ${wine.verification_status}<br>` : ''}
-                    </div>
-                    ${wine.tasting_notes ? `
-                        <div class="scan-response">
-                            <strong>Tasting Notes:</strong><br>
-                            ${escapeHtml(wine.tasting_notes.substring(0, 300))}${wine.tasting_notes.length > 300 ? '...' : ''}
+
+                    <!-- Summary View -->
+                    <div id="wine-summary-${index}" class="wine-summary">
+                        <div class="scan-details">
+                            ${wine.producer ? `<strong>Producer:</strong> ${escapeHtml(wine.producer)}<br>` : ''}
+                            ${wine.region ? `<strong>Region:</strong> ${escapeHtml(wine.region)}<br>` : ''}
+                            ${wine.varietal ? `<strong>Varietal:</strong> ${escapeHtml(wine.varietal)}<br>` : ''}
+                            ${wine.vintage ? `<strong>Vintage:</strong> ${wine.vintage}<br>` : ''}
+                            ${wine.appellation ? `<strong>Appellation:</strong> ${escapeHtml(wine.appellation)}<br>` : ''}
+                            ${wine.country ? `<strong>Country:</strong> ${escapeHtml(wine.country)}<br>` : ''}
+                            ${wine.price ? `<strong>Price:</strong> ${wine.price}<br>` : ''}
+                            ${wine.verification_status ? `<strong>Status:</strong> ${wine.verification_status}<br>` : ''}
                         </div>
-                    ` : ''}
+                        ${wine.tasting_notes ? `
+                            <div class="scan-response" style="margin-top: 10px;">
+                                <strong>Tasting Notes:</strong><br>
+                                ${escapeHtml(wine.tasting_notes.substring(0, 300))}${wine.tasting_notes.length > 300 ? '...' : ''}
+                            </div>
+                        ` : ''}
+                        <button class="expand-btn" onclick="toggleWineDetails(${index})">
+                            Show All Details
+                        </button>
+                    </div>
+
+                    <!-- Detailed View (Hidden by default) -->
+                    <div id="wine-details-${index}" class="wine-details" style="display: none;">
+                        <div class="scan-response">
+                            <strong>Complete Wine Information:</strong><br><br>
+                            ${allFields}
+                        </div>
+                        <button class="expand-btn" onclick="toggleWineDetails(${index})" style="margin-top: 10px;">
+                            Show Less
+                        </button>
+                    </div>
                 </div>
             `;
         }).join('')}
