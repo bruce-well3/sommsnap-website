@@ -272,6 +272,14 @@ nav a:hover {
     margin: 0 auto;
 }
 
+.pricing-grid-five {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
 .plan {
     background: rgba(255, 255, 255, 0.95);
     border: 2px solid rgba(255, 255, 255, 0.3);
@@ -456,6 +464,7 @@ footer a:hover {
     .pricing-grid,
     .pricing-grid-two,
     .pricing-grid-three,
+    .pricing-grid-five,
     .steps-grid {
         grid-template-columns: 1fr;
     }
